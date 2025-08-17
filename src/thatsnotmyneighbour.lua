@@ -25,6 +25,6 @@ end
 local window = library:Window("Thats Not My Neighbour - CherryWare")
 
 window:Toggle("Auto Farm", false, function(bool)
-    af= bool
+    af = bool
     autoFarm()
 end)
