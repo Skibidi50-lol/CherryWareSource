@@ -76,7 +76,7 @@ end)
 
 NEVERLOSE:Theme("nightly")
 
-local Window = NEVERLOSE:AddWindow("CherryWare", "Text")
+local Window = NEVERLOSE:AddWindow("CherryWare", "Rivals")
 
 local MainTab = Window:AddTab("Combat", "crosshair")
 local CombatSection = MainTab:AddSection("Aimbot Settings", "left")
