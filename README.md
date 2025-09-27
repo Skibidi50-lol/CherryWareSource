@@ -9,3 +9,7 @@ loadstring(game:HttpGet(('https://raw.githubusercontent.com/Skibidi50-lol/Cherry
 ```lua
 loadstring(game:HttpGet(('https://raw.githubusercontent.com/Skibidi50-lol/CherryWareSource/refs/heads/main/src/CherryWare.lua')))()
 ```
+## 99 Night In The Forest (New)
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Skibidi50-lol/CherryWareSource/refs/heads/main/99Night.lua"))()
+```
