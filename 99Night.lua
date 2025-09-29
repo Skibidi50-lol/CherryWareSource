@@ -365,6 +365,11 @@ local Config = ConfigManager:CreateConfig("Config")
 --Tabs
 local Tabs = {}
 
+Tabs.Upd = Window:Tab({
+    Title = "Update Note",
+    Icon = "notebook",
+})
+
 Tabs.Auto = Window:Tab({
     Title = "Automation",
     Icon = "repeat",
@@ -392,13 +397,27 @@ Tabs.Misc = Window:Tab({
     Title = "Misc",
     Icon = "dices",
 })
+--Update
+
+local Section = Tabs.Upd:Section({ 
+    Title = "Updates",
+    TextXAlignment = "Left",
+    TextSize = 17,
+	Icon = "notebook"
+})
+
+local Paragraph = Tabs.Upd:Paragraph({
+    Title = "Update",
+    Desc = "More Misc\nAuto Stun Deer",
+    Locked = false,
+})
 
 --Auto
 local Section = Tabs.Auto:Section({ 
     Title = "Auto Upgrade Campfire",
     TextXAlignment = "Left",
     TextSize = 17,
-	Icon = "flame"
+	Icon = "flame
 })
 
 Tabs.Auto:Dropdown({
@@ -408,7 +427,7 @@ Tabs.Auto:Dropdown({
     Multi = false,
     AllowNone = true,
     Callback = function(option)
-        selectedCampfireItem = option -- Store single selected item
+        selectedCampfireItem = option
     end
 })
 
@@ -778,7 +797,7 @@ Tabs.Tp:Toggle({
                         local rightVector = treeCFrame.RightVector
                         local targetPosition = treeCFrame.Position + rightVector * 69
                         hrp.CFrame = CFrame.new(targetPosition)
-                        task.wait(0.025)
+                        task.wait(0.1)
                     end
                 end
             end
@@ -897,6 +916,9 @@ local Section = Tabs.plr:Section({
 
 local Players = game:GetService("Players")
 local speed = 16
+local InfiniteJump = false
+
+
 
 local function setSpeed(val)
     local humanoid = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -917,6 +939,19 @@ Tabs.plr:Slider({
     Value = { Min = 16, Max = 150, Default = 16 },
     Callback = function(value)
         speed = value
+    end
+})
+
+Tabs.plr:Toggle({
+    Title = "Infinite Jump",
+    Value = false,
+    Callback = function(state)
+        InfiniteJump = state
+        game:GetService("UserInputService").JumpRequest:connect(function()
+            if InfiniteJump then
+                game:GetService"Players".LocalPlayer.Character:FindFirstChildOfClass'Humanoid':ChangeState("Jumping")
+            end
+        end)
     end
 })
 
@@ -961,6 +996,11 @@ Tabs.Misc:Toggle({
         end
     end
 })
+
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local torchLoop = nil
+
 
 local originalParents = {
     Sky = nil,
@@ -1046,5 +1086,103 @@ Tabs.Misc:Toggle({
     end
 })
 
+local vibrantEffect = Lighting:FindFirstChild("VibrantEffect") or Instance.new("ColorCorrectionEffect")
+vibrantEffect.Name = "VibrantEffect"
+vibrantEffect.Saturation = 0.9
+vibrantEffect.Contrast = 0.4
+vibrantEffect.Brightness = 0.1
+vibrantEffect.Enabled = false
+vibrantEffect.Parent = Lighting
+
+Tabs.Misc:Toggle({
+    Title = "Vibrant Colors",
+    Default = false,
+    Callback = function(state)
+        if state then
+            Lighting.Ambient = Color3.fromRGB(180, 180, 180)
+            Lighting.OutdoorAmbient = Color3.fromRGB(170, 170, 170)
+            Lighting.ColorShift_Top = Color3.fromRGB(255, 230, 200)
+            Lighting.ColorShift_Bottom = Color3.fromRGB(200, 240, 255)
+            vibrantEffect.Enabled = true
+        else
+            Lighting.Ambient = Color3.new(0, 0, 0)
+            Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+            Lighting.ColorShift_Top = Color3.new(0, 0, 0)
+            Lighting.ColorShift_Bottom = Color3.new(0, 0, 0)
+            vibrantEffect.Enabled = false
+        end
+    end
+})
+
+Tabs.Misc:Button({
+    Title = "FPS Boost",
+    Callback = function()
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+            local lighting = game:GetService("Lighting")
+            lighting.Brightness = 0
+            lighting.FogEnd = 100
+            lighting.GlobalShadows = false
+            lighting.EnvironmentDiffuseScale = 0
+            lighting.EnvironmentSpecularScale = 0
+            lighting.ClockTime = 14
+            lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+            local terrain = workspace:FindFirstChildOfClass("Terrain")
+            if terrain then
+                terrain.WaterWaveSize = 0
+                terrain.WaterWaveSpeed = 0
+                terrain.WaterReflectance = 0
+                terrain.WaterTransparency = 1
+            end
+            for _, obj in ipairs(lighting:GetDescendants()) do
+                if obj:IsA("PostEffect") or obj:IsA("BloomEffect") or obj:IsA("ColorCorrectionEffect") or obj:IsA("SunRaysEffect") or obj:IsA("BlurEffect") then
+                    obj.Enabled = false
+                end
+            end
+            for _, obj in ipairs(game:GetDescendants()) do
+                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                    obj.Enabled = false
+                elseif obj:IsA("Texture") or obj:IsA("Decal") then
+                    obj.Transparency = 1
+                end
+            end
+            for _, part in ipairs(workspace:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CastShadow = false
+                end
+            end
+        end)
+    end
+})
+
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local torchLoop = nil
+
+Tabs.Misc:Toggle({
+    Title = "Auto Stun Deer (Untested)",
+    Value = false,
+    Callback = function(state)
+        if state then
+            torchLoop = RunService.RenderStepped:Connect(function()
+                pcall(function()
+                    local remote = ReplicatedStorage:FindFirstChild("RemoteEvents")
+                        and ReplicatedStorage.RemoteEvents:FindFirstChild("DeerHitByTorch")
+                    local deer = workspace:FindFirstChild("Characters")
+                        and workspace.Characters:FindFirstChild("Deer")
+                    if remote and deer then
+                        remote:InvokeServer(deer)
+                    end
+                end)
+                task.wait(0.1)
+            end)
+        else
+            if torchLoop then
+                torchLoop:Disconnect()
+                torchLoop = nil
+            end
+        end
+    end
+})
 
 Window:SelectTab(1)
