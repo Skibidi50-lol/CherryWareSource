@@ -98,6 +98,15 @@ local campfireFuelItems = {"Log", "Coal", "Chair", "Fuel Canister", "Oil Barrel"
 local campfireDropPos = Vector3.new(0, 19, 0)
 local selectedCampfireItem = nil -- Single item storage
 local autoUpgradeCampfireEnabled = false
+
+-- esp
+local ie = {
+    "Bandage", "Bolt", "Broken Fan", "Broken Microwave", "Cake", "Carrot", "Chair", "Coal", "Coin Stack",
+    "Cooked Morsel", "Cooked Steak", "Fuel Canister", "Iron Body", "Leather Armor", "Log", "MadKit", "Metal Chair",
+    "MedKit", "Old Car Engine", "Old Flashlight", "Old Radio", "Revolver", "Revolver Ammo", "Rifle", "Rifle Ammo",
+    "Morsel", "Sheet Metal", "Steak", "Tyre", "Washing Machine"
+}
+local me = {"Bunny", "Wolf", "Alpha Wolf", "Bear", "Cultist", "Crossbow Cultist", "Alien", "Polar Bear"}
 --auto scrap
 local scrapjunkItems = {"Log", "Chair", "Tyre", "Bolt", "Broken Fan", "Broken Microwave", "Sheet Metal", "Old Radio", "Washing Machine", "Old Car Engine"}
 local autoScrapPos = Vector3.new(21, 20, -5)
@@ -388,6 +397,12 @@ Tabs.Tp = Window:Tab({
     Title = "Teleport",
     Icon = "map",
 })
+
+Tabs.esp = Window:Tab({
+    Title = "ESP",
+    Icon = "eye",
+})
+
 Tabs.plr = Window:Tab({
     Title = "Player",
     Icon = "user",
@@ -408,7 +423,7 @@ local Section = Tabs.Upd:Section({
 
 local Paragraph = Tabs.Upd:Paragraph({
     Title = "Update",
-    Desc = "More Misc\nAuto Stun Deer",
+    Desc = "Jump Boost\nESP",
     Locked = false,
 })
 
@@ -417,7 +432,7 @@ local Section = Tabs.Auto:Section({
     Title = "Auto Upgrade Campfire",
     TextXAlignment = "Left",
     TextSize = 17,
-	Icon = "flame
+	Icon = "flame"
 })
 
 Tabs.Auto:Dropdown({
@@ -906,6 +921,211 @@ Tabs.Tp:Button({
         end
     end
 })
+--esp
+function createESPText(part, text, color)
+    if part:FindFirstChild("ESPTexto") then return end
+
+    local esp = Instance.new("BillboardGui")
+    esp.Name = "ESPText"
+    esp.Adornee = part
+    esp.Size = UDim2.new(0, 100, 0, 20)
+    esp.StudsOffset = Vector3.new(0, 2.5, 0)
+    esp.AlwaysOnTop = true
+    esp.MaxDistance = 300
+
+    local label = Instance.new("TextLabel")
+    label.Parent = esp
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = color or Color3.fromRGB(255,255,0)
+    label.TextStrokeTransparency = 0.2
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+
+    esp.Parent = part
+end
+
+local function Aesp(nome, tipo)
+    local container
+    local color
+    if tipo == "item" then
+        container = workspace:FindFirstChild("Items")
+        color = Color3.fromRGB(0, 255, 0)
+    elseif tipo == "mob" then
+        container = workspace:FindFirstChild("Characters")
+        color = Color3.fromRGB(255, 255, 0)
+    else
+        return
+    end
+    if not container then return end
+
+    for _, obj in ipairs(container:GetChildren()) do
+        if obj.Name == nome then
+            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+            if part then
+                createESPText(part, obj.Name, color)
+            end
+        end
+    end
+end
+
+local function Desp(nome, tipo)
+    local container
+    if tipo == "item" then
+        container = workspace:FindFirstChild("Items")
+    elseif tipo == "mob" then
+        container = workspace:FindFirstChild("Characters")
+    else
+        return
+    end
+    if not container then return end
+
+    for _, obj in ipairs(container:GetChildren()) do
+        if obj.Name == nome then
+            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+            if part then
+                for _, gui in ipairs(part:GetChildren()) do
+                    if gui:IsA("BillboardGui") and gui.Name == "ESPTexto" then
+                        gui:Destroy()
+                    end
+                end
+            end
+        end
+    end
+end
+
+local selectedItems = {}
+local selectedMobs = {}
+local espItemsEnabled = false
+local espMobsEnabled = false
+local espConnections = {}
+
+Tabs.esp:Section({ Title = "Esp Items", Icon = "package" })
+
+Tabs.esp:Toggle({
+    Title = "Enable Esp",
+    Value = false,
+    Callback = function(state)
+        espItemsEnabled = state
+        for _, name in ipairs(ie) do
+            if state and table.find(selectedItems, name) then
+                Aesp(name, "item")
+            else
+                Desp(name, "item")
+            end
+        end
+
+        if state then
+            if not espConnections["Items"] then
+                local container = workspace:FindFirstChild("Items")
+                if container then
+                    espConnections["Items"] = container.ChildAdded:Connect(function(obj)
+                        if table.find(selectedItems, obj.Name) then
+                            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+                            if part then
+                                createESP(part, obj.Name, Color3.fromRGB(0, 255, 0))
+                            end
+                        end
+                    end)
+                end
+            end
+        else
+            if espConnections["Items"] then
+                espConnections["Items"]:Disconnect()
+                espConnections["Items"] = nil
+            end
+        end
+    end
+})
+
+Tabs.esp:Dropdown({
+    Title = "Esp Items",
+    Values = ie,
+    Value = {},
+    Multi = true,
+    AllowNone = true,
+    Callback = function(options)
+        selectedItems = options
+        if espItemsEnabled then
+            for _, name in ipairs(ie) do
+                if table.find(selectedItems, name) then
+                    Aesp(name, "item")
+                else
+                    Desp(name, "item")
+                end
+            end
+        else
+            for _, name in ipairs(ie) do
+                Desp(name, "item")
+            end
+        end
+    end
+})
+
+Tabs.esp:Section({ Title = "Esp Entity", Icon = "user" })
+
+Tabs.esp:Dropdown({
+    Title = "Esp Entity",
+    Values = me,
+    Value = {},
+    Multi = true,
+    AllowNone = true,
+    Callback = function(options)
+        selectedMobs = options
+        if espMobsEnabled then
+            for _, name in ipairs(me) do
+                if table.find(selectedMobs, name) then
+                    Aesp(name, "mob")
+                else
+                    Desp(name, "mob")
+                end
+            end
+        else
+            for _, name in ipairs(me) do
+                Desp(name, "mob")
+            end
+        end
+    end
+})
+
+Tabs.esp:Toggle({
+    Title = "Enable Esp",
+    Value = false,
+    Callback = function(state)
+        espMobsEnabled = state
+        for _, name in ipairs(me) do
+            if state and table.find(selectedMobs, name) then
+                Aesp(name, "mob")
+            else
+                Desp(name, "mob")
+            end
+        end
+
+        if state then
+            if not espConnections["Mobs"] then
+                local container = workspace:FindFirstChild("Characters")
+                if container then
+                    espConnections["Mobs"] = container.ChildAdded:Connect(function(obj)
+                        if table.find(selectedMobs, obj.Name) then
+                            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+                            if part then
+                                createESP(part, obj.Name, Color3.fromRGB(255, 255, 0))
+                            end
+                        end
+                    end)
+                end
+            end
+        else
+            if espConnections["Mobs"] then
+                espConnections["Mobs"]:Disconnect()
+                espConnections["Mobs"] = nil
+            end
+        end
+    end
+})
+
+
 --player
 local Section = Tabs.plr:Section({ 
     Title = "Player Settings",
@@ -916,6 +1136,7 @@ local Section = Tabs.plr:Section({
 
 local Players = game:GetService("Players")
 local speed = 16
+local jump = 50
 local InfiniteJump = false
 
 
@@ -923,6 +1144,13 @@ local InfiniteJump = false
 local function setSpeed(val)
     local humanoid = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if humanoid then humanoid.WalkSpeed = val end
+end
+
+local function setJump(val)
+    local humanoid = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.JumpPower = val
+    end
 end
 
 Tabs.plr:Toggle({
@@ -939,6 +1167,22 @@ Tabs.plr:Slider({
     Value = { Min = 16, Max = 150, Default = 16 },
     Callback = function(value)
         speed = value
+    end
+})
+
+Tabs.plr:Toggle({
+    Title = "Enable Jump Boost",
+    Value = false,
+    Callback = function(state)
+        setJump(state and jump or 16)
+    end
+})
+
+Tabs.plr:Slider({
+    Title = "Jump Boost Ammount",
+    Value = { Min = 10, Max = 300, Default = 50 },
+    Callback = function(value)
+        jump = value
     end
 })
 
@@ -1160,7 +1404,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local torchLoop = nil
 
 Tabs.Misc:Toggle({
-    Title = "Auto Stun Deer (Untested)",
+    Title = "Auto Stun Deer",
     Value = false,
     Callback = function(state)
         if state then
